@@ -1,1 +1,44 @@
+try:
+    import google.colab
+    # Running on Google Colab, so install Biopython first
+    !pip install biopython
+except ImportError:
+    pass
 
+
+from Bio import Entrez
+from Bio import SeqIO
+Entrez.email = "A.N.Other@example.com"
+import pandas as pd
+import xml.etree.ElementTree as ET
+
+dis = pd.read_table('gene_disease_associations.tsv')
+dis
+
+schis_db = dis.loc[dis['disease_name'] == 'Adenocarcinoma']
+schis_db
+
+handle = Entrez.efetch(db="gene", id="52", rettype = 'xml')
+gene_locus = ET.parse(handle).getroot().find("Entrezgene/Entrezgene_locus")
+region = gene_locus.find("Gene-commentary/Gene-commentary_seqs/Seq-loc/Seq-loc_int/Seq-interval")
+start = int(region.find("Seq-interval_from").text) + 1
+end = int(region.find("Seq-interval_to").text) + 1
+gi_id = region.find("Seq-interval_id/Seq-id/Seq-id_gi").text
+strand = region.find("Seq-interval_strand/Na-strand").get("value")
+print(start, end, gi_id, strand)
+
+#Выгрузить с NCBI нуклеотидную последовательность X хромосомы, для этого узнать ID хромосомы - NC_000023.11
+handle = Entrez.efetch(db="nucleotide",
+                       id="NC_000023.11",
+                       rettype = 'fasta',
+                       retmode = 'text')
+#загружаем
+chromosome = SeqIO.read(handle, 'fasta')
+
+#а та ли это хромосома?
+chromosome.description
+
+#вырезаем из хромосомы ген, для этого узнаем локацию нужного гена. Для ACE2 это 15518197..15607211
+geneACE2 = chromosome.seq[15518197:15607211]
+print(geneACE2)
+len(geneACE2)
